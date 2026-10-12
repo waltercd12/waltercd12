@@ -2,6 +2,8 @@ name: Radio Schipluiden APK
 on:
   push:
     branches: [radio-schipluiden-android-apk]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 jobs:
   build:
