@@ -1,0 +1,17 @@
+name: Controleer Radio Schipluiden titels
+on:
+  push:
+    branches: [build/radioschipluiden-android-20261017]
+  workflow_dispatch:
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Controleer publieke status
+        run: |
+          for path in 7.html status-json.xsl 'stats?sid=1&json=1'; do
+            echo "==== $path ===="
+            curl --silent --show-error --location --max-time 10 --output /tmp/radio_response --write-out 'HTTP %{http_code} CONTENT-TYPE %{content_type}\n' "https://c40.radioboss.fm:8298/$path" || true
+            head -c 500 /tmp/radio_response || true
+            echo ''
+          done
