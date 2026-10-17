@@ -30,6 +30,7 @@ jobs:
       - name: Maak projectbestanden
         run: |
           base64 --decode radio-build/radio-sources.tar.xz.b64 | xz -dc | tar -xf -
+          base64 --decode radio-build/metadata-java.tar.xz.b64 | tar -xJf -
           mkdir -p app/src/main/res/mipmap-nodpi app/src/main/assets
           python3 - <<'PY'
           import base64
