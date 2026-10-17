@@ -56,7 +56,7 @@ jobs:
           from pathlib import Path
           png='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL7zAAAAABJRU5ErkJggg=='
           Path('app/src/main/res/mipmap-nodpi/ic_launcher.png').write_bytes(base64.b64decode(png))
-          Path('app/src/main/assets/player.html').write_text('<html><body><h1>Radio Schipluiden</h1></body></html>',encoding='utf-8')
+          Path('app/src/main/assets/player.html').write_text('<html><head><style></style></head><body><h1>Radio Schipluiden</h1></body></html>',encoding='utf-8')
           PY
       - name: Android autoradio optimalisatie
         run: |
