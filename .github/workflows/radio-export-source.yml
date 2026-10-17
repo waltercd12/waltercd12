@@ -1,0 +1,21 @@
+name: Export Radio Schipluiden metadata source
+on:
+  push:
+    branches: [build/radioschipluiden-android-20261017]
+  workflow_dispatch:
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack sources
+        run: |
+          mkdir -p exported
+          base64 -d radio-build/metadata-java.tar.xz.b64 | tar -xJf - -C exported
+          find exported -type f
+      - uses: actions/upload-artifact@v4
+        with:
+          name: radio-metadata-java-source
+          path: exported
