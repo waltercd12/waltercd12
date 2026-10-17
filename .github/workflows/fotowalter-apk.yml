@@ -29,8 +29,9 @@ jobs:
       - name: FotoWalter-logo klaarzetten
         run: |
           mkdir -p app/src/main/res/drawable
-          base64 -d app/brand.jpg.base64 > app/src/main/res/drawable/brand.jpg
-          file app/src/main/res/drawable/brand.jpg
+          base64 -d app/brand.webp.base64 > app/src/main/res/drawable/brand.webp
+          test "$(wc -c < app/src/main/res/drawable/brand.webp)" -eq 3758
+          file app/src/main/res/drawable/brand.webp
       - name: Android-app compileren
         run: gradle --no-daemon --stacktrace :app:assembleDebug
       - name: APK beschikbaar maken
