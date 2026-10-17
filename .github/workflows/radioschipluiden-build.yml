@@ -31,6 +31,25 @@ jobs:
         run: |
           base64 --decode radio-build/radio-sources.tar.xz.b64 | xz -dc | tar -xf -
           base64 --decode radio-build/metadata-java.tar.xz.b64 | tar -xJf -
+          base64 --decode radio-build/reconnect-service.tar.xz.b64 | tar -xJf -
+          python3 - <<'PYFIX'
+          from pathlib import Path
+          manifest=Path('app/src/main/AndroidManifest.xml')
+          s=manifest.read_text()
+          s=s.replace('<uses-permission android:name="android.permission.WAKE_LOCK" />',
+             '<uses-permission android:name="android.permission.WAKE_LOCK" />\n    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\n    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />')
+          assert 'ACCESS_WIFI_STATE' in s and 'ACCESS_NETWORK_STATE' in s
+          manifest.write_text(s)
+          activity=Path('app/src/main/java/nl/radioschipluiden/app/MainActivity.java')
+          s=activity.read_text()
+          if '@Override public void onBackPressed()' not in s:
+              s=s.replace('    @Override protected void onDestroy() {','    @Override public void onBackPressed() {\n        startCommand(RadioService.ACTION_STOP);\n        super.onBackPressed();\n    }\n    @Override protected void onDestroy() {')
+          assert '@Override public void onBackPressed()' in s
+          activity.write_text(s)
+          build=Path('app/build.gradle')
+          s=build.read_text().replace('versionCode 5','versionCode 6').replace("versionName '2.0'", "versionName '2.4'")
+          build.write_text(s)
+          PYFIX
           mkdir -p app/src/main/res/mipmap-nodpi app/src/main/assets
           python3 - <<'PY'
           import base64
