@@ -120,9 +120,9 @@ repl("        handler.removeCallbacks(watchdog);\n        releasePlayer();", "  
 repl("        handler.removeCallbacks(watchdog);\n        releasePlayer();", "        handler.removeCallbacks(watchdog);\n        abandonAudioFocus();\n        releasePlayer();")
 # Java forbids unqualified forward field references from field initializers.
 # Declare the player and play intent before the focus listener and retry callback.
-s=s.replace("    private AudioManager audioManager;", "    private MediaPlayer player;\\n    private boolean wantsPlayback;\\n    private AudioManager audioManager;", 1)
-s=s.replace("    private MediaPlayer player;\\n    private NotificationManager notificationManager;", "    private NotificationManager notificationManager;", 1)
-s=s.replace("    private boolean wantsPlayback;\\n    private boolean inForeground;", "    private boolean inForeground;", 1)
+s=s.replace("    private AudioManager audioManager;", "    private MediaPlayer player;\n    private boolean wantsPlayback;\n    private AudioManager audioManager;", 1)
+s=s.replace("    private MediaPlayer player;\n    private NotificationManager notificationManager;", "    private NotificationManager notificationManager;", 1)
+s=s.replace("    private boolean wantsPlayback;\n    private boolean inForeground;", "    private boolean inForeground;", 1)
 a0=s.index("    private final AudioManager.OnAudioFocusChangeListener focusListener")
 a1=s.index("    private final Runnable focusRetry", a0)
 a2=s.index("    private boolean requestAudioFocus()", a1)
@@ -132,6 +132,6 @@ a=Path("app/src/main/java/nl/radioschipluiden/app/AutoMediaService.java")
 t=a.read_text()
 old='    session.setActive(true);'
 assert old in t
-t=t.replace(old, '    session.setPlaybackToLocal(AudioManager.STREAM_MUSIC);\n'+old,1)
+t=t.replace(old, '    session.setPlaybackToLocal(new AudioAttributes.Builder()\n        .setUsage(AudioAttributes.USAGE_MEDIA)\n        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build());\n'+old,1)
 a.write_text(t)
 print("Audio focus patch applied:",len(s),"bytes; Android Auto session routed to music stream")
