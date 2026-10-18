@@ -118,6 +118,15 @@ repl("""                    publish("playing", "Je luistert live · radio blijft
 repl("    private void releasePlayer() {\n        if (player == null) return;", "    private void releasePlayer() {\n        readyToPlay=false;\n        if (player == null) return;")
 repl("        handler.removeCallbacks(watchdog);\n        releasePlayer();", "        handler.removeCallbacks(watchdog);\n        abandonAudioFocus();\n        releasePlayer();")
 repl("        handler.removeCallbacks(watchdog);\n        releasePlayer();", "        handler.removeCallbacks(watchdog);\n        abandonAudioFocus();\n        releasePlayer();")
+# Java forbids unqualified forward field references from field initializers.
+# Declare the player and play intent before the focus listener and retry callback.
+s=s.replace("    private AudioManager audioManager;", "    private MediaPlayer player;\\n    private boolean wantsPlayback;\\n    private AudioManager audioManager;", 1)
+s=s.replace("    private MediaPlayer player;\\n    private NotificationManager notificationManager;", "    private NotificationManager notificationManager;", 1)
+s=s.replace("    private boolean wantsPlayback;\\n    private boolean inForeground;", "    private boolean inForeground;", 1)
+a0=s.index("    private final AudioManager.OnAudioFocusChangeListener focusListener")
+a1=s.index("    private final Runnable focusRetry", a0)
+a2=s.index("    private boolean requestAudioFocus()", a1)
+s=s[:a0]+s[a1:a2]+s[a0:a1]+s[a2:]
 p.write_text(s)
 a=Path("app/src/main/java/nl/radioschipluiden/app/AutoMediaService.java")
 t=a.read_text()
