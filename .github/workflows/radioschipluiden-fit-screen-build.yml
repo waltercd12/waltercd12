@@ -154,7 +154,7 @@ jobs:
         run: python3 radio-build/cast-startup-fix.py
       - name: Plaats Cast in speler en voeg updatecontrole toe
         run: python3 radio-build/cast-update-v3-patch.py
-      - name: Zet nieuw Android-versienummer 3.2
+      - name: Zet nieuw Android-versienummer 3.3
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -164,7 +164,7 @@ jobs:
                  else "        versionName '3.3'" if x.strip().startswith('versionName ')
                  else x for x in lines]
           p.write_text(chr(10).join(lines)+chr(10))
-          assert 'versionCode 14' in p.read_text()
+          assert 'versionCode 15' in p.read_text()
           PY
       - name: Bouw echte Android APK
         run: gradle --no-daemon --stacktrace assembleDebug
