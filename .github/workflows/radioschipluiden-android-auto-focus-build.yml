@@ -106,11 +106,12 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           build=Path('app/build.gradle')
-          import re
-          s=build.read_text()
-          s=re.sub(r'versionCode\\s+\\d+', 'versionCode 10', s)
-          s=re.sub(r"versionName\\s+'[^']+'", "versionName '2.7-AndroidAuto'", s)
-          assert 'versionCode 10' in s and "versionName '2.7-AndroidAuto'" in s
+          lines=build.read_text().splitlines()
+          lines=["        versionCode 10" if line.strip().startswith("versionCode ")
+                 else "        versionName '2.7-AndroidAuto'" if line.strip().startswith("versionName ")
+                 else line for line in lines]
+          s=chr(10).join(lines)+chr(10)
+          assert "versionCode 10" in s and "versionName '2.7-AndroidAuto'" in s
           build.write_text(s)
           assert 'requestAudioFocus()' in Path('app/src/main/java/nl/radioschipluiden/app/RadioService.java').read_text()
           PY
