@@ -164,7 +164,7 @@ jobs:
                  else "        versionName '3.5'" if x.strip().startswith('versionName ')
                  else x for x in lines]
           p.write_text(chr(10).join(lines)+chr(10))
-          assert 'versionCode 16' in p.read_text()
+          assert 'versionCode 17' in p.read_text()
           PY
       - name: Bouw echte Android APK
         run: gradle --no-daemon --stacktrace assembleDebug
