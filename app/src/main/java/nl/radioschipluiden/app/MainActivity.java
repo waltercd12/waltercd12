@@ -1,30 +1,65 @@
 package nl.radioschipluiden.app;
+
 import android.Manifest;
 import android.app.Activity;
-import android.content.Intent;
+import android.content.*;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
-import android.graphics.Typeface;
-import android.view.Gravity;
-import android.widget.*;
-import android.net.Uri;
+import android.webkit.*;
+import android.view.View;
+import android.view.WindowInsets;
+import org.json.JSONObject;
+
 public final class MainActivity extends Activity {
-  private Button toggle; private boolean playing=false;
-  @Override public void onCreate(Bundle b){super.onCreate(b);
-    LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setGravity(Gravity.CENTER);root.setPadding(32,32,32,32);root.setBackgroundColor(Color.rgb(21,41,49));
-    ImageView icon=new ImageView(this);icon.setImageResource(R.drawable.logo);root.addView(icon,new LinearLayout.LayoutParams(240,240));
-    TextView name=new TextView(this);name.setText("RADIO SCHIPLUIDEN");name.setTextColor(Color.WHITE);name.setTextSize(29);name.setTypeface(null,Typeface.BOLD);name.setGravity(Gravity.CENTER);root.addView(name);
-    TextView tagline=new TextView(this);tagline.setText("Altijd aan • Live luisteren");tagline.setTextColor(0xffffb96d);tagline.setTextSize(19);tagline.setPadding(0,12,0,36);tagline.setGravity(Gravity.CENTER);root.addView(tagline);
-    toggle=new Button(this);toggle.setText("▶  LUISTER LIVE");root.addView(toggle,new LinearLayout.LayoutParams(-1,130));
-    toggle.setOnClickListener(v->{ if(Build.VERSION.SDK_INT>=33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},21);
-       Intent i=new Intent(this,RadioService.class);i.setAction(playing?"STOP":"PLAY");
-       if(playing)startService(i);else startForegroundService(i);
-       playing=!playing;toggle.setText(playing?"■  STOP RADIO":"▶  LUISTER LIVE");
-    });
-    Button site=new Button(this);site.setText("OPEN RADIO SCHIPLUIDEN WEBSITE");site.setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("https://radioschipluiden.nl"))));root.addView(site,new LinearLayout.LayoutParams(-1,120));
-    TextView note=new TextView(this);note.setText("Speelt ook door als het scherm vergrendeld is.");note.setTextColor(Color.WHITE);note.setGravity(Gravity.CENTER);root.addView(note);
-    setContentView(root);
-  }
+    private WebView web;
+    private boolean loaded = false;
+    private final BroadcastReceiver updates = new BroadcastReceiver() {
+        @Override public void onReceive(Context context, Intent intent) {
+            if(RadioService.EVENT.equals(intent.getAction())) sendState(intent.getStringExtra("stage"));
+        }
+    };
+    public final class Bridge {
+        @JavascriptInterface public void toggle() {
+            runOnUiThread(() -> {
+                String current = RadioService.stage;
+                Intent action = new Intent(MainActivity.this, RadioService.class);
+                if ("intro".equals(current) || "connecting".equals(current) || "playing".equals(current) || "buffering".equals(current)) {
+                    action.setAction(RadioService.STOP); startService(action);
+                } else {
+                    if(Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
+                       requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 31);
+                    action.setAction(RadioService.PLAY); startForegroundService(action);
+                    sendState("intro");
+                }
+            });
+        }
+    }
+    @Override public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        getWindow().setStatusBarColor(Color.rgb(8,20,35));getWindow().setNavigationBarColor(Color.rgb(8,20,35));
+        web = new WebView(this);
+        web.setBackgroundColor(Color.rgb(8,20,35));web.getSettings().setJavaScriptEnabled(true);
+        web.getSettings().setDomStorageEnabled(true);
+        web.getSettings().setAllowFileAccess(true);
+        web.getSettings().setMediaPlaybackRequiresUserGesture(false);
+        web.addJavascriptInterface(new Bridge(),"RadioAndroid");
+        web.setWebViewClient(new WebViewClient() {
+            @Override public void onPageFinished(WebView w,String url) {loaded=true;sendState(RadioService.stage);}
+            @Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest request) {
+                android.net.Uri uri=request.getUrl();
+                if("file".equals(uri.getScheme()))return false;
+                startActivity(new Intent(Intent.ACTION_VIEW,uri));return true;
+            }
+        });
+        setContentView(web);
+        if (Build.VERSION.SDK_INT>=33) registerReceiver(updates,new IntentFilter(RadioService.EVENT),Context.RECEIVER_NOT_EXPORTED);
+        else registerReceiver(updates,new IntentFilter(RadioService.EVENT));
+        web.loadUrl("file:///android_asset/index.html");
+    }
+    private void sendState(String stage) {
+        if(loaded && web!=null) web.evaluateJavascript("window.RadioPlayer&&window.RadioPlayer.setNativeState("+JSONObject.quote(stage==null?"off":stage)+")",null);
+    }
+    @Override protected void onDestroy() {unregisterReceiver(updates);if(web!=null){web.destroy();web=null;}super.onDestroy();}
 }
