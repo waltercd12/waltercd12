@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1b2b"><meta name="description" content="Radio Schipluiden – muziek uit het hart van Schipluiden, altijd aan.">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<title>Radio Schipluiden • ON AIR</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<div class="app">
+  <header class="hero"><img src="banner.webp" alt="Radio Schipluiden – banner met radiomascotte, dorpskerk, brug en molen"><div class="strap">♪ De beste hits van nu en toen ♪</div></header>
+  <main class="player" aria-label="Radio Schipluiden radioplayer">
+    <div class="pumpkins" aria-label="Knipperende Halloween-discopompoenen"><span>🎃</span><span>🎃</span><span>🎃</span><span>🎃</span><span>🎃</span><span>🎃</span><span>🎃</span></div>
+    <div class="onair"><span class="onair-dot"></span> ON AIR</div>
+    <h1>Radio Schipluiden</h1><p class="subtitle">ALTIJD AAN</p>
+    <div class="trackbox"><div class="eyebrow">NU OP DE RADIO</div><div class="nowplaying-details"><div class="cover-frame"><img id="albumCover" src="icon-512.png" alt="Actuele cd-hoes" loading="eager"><span class="sr-only" id="albumLabel">Radio Schipluiden-logo</span></div><div class="song-info"><div class="artist" id="trackArtist">Radio Schipluiden</div><div class="track" id="song">De beste hits van nu en toen</div></div></div><p class="status" id="status" aria-live="polite">Klaar om te luisteren</p></div>
+    <button class="play" type="button" id="play" aria-label="Start de radio" aria-pressed="false"><svg viewBox="0 0 24 24" id="playSvg" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>
+    <div class="playlabel" id="playlabel">TIK OM TE LUISTEREN</div>
+    <div class="pumpkin-floor" aria-hidden="true">✧ 🎃 ✦ 🎃 ✧ 🎃 ✦</div>
+  </main>
+  <a class="site-link" href="https://radioschipluiden.nl/" target="_blank" rel="noopener">🌐 RadioSchipluiden.nl</a>
+  <footer>Radio Schipluiden · Non-stop muziek</footer>
+</div>
+<audio id="intro" preload="auto" src="intro-jingle.mp3" playsinline></audio>
+<audio id="stream" preload="none" playsinline src="https://c40.radioboss.fm:8298/stream"></audio>
+<script src="player.js" defer></script><script src="metadata.js" defer></script></body></html>

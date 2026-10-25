@@ -1,0 +1,25 @@
+{
+  "id": "/app/",
+  "name": "Radio Schipluiden – ON AIR",
+  "short_name": "Radio Schipluiden",
+  "description": "Radio Schipluiden met jingle en discopompoenen",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "display": "standalone",
+  "background_color": "#081423",
+  "theme_color": "#0b1b2b",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
