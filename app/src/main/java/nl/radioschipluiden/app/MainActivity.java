@@ -10,18 +10,32 @@ import android.os.Bundle;
 import android.webkit.*;
 import android.view.View;
 import android.view.WindowInsets;
-import org.json.JSONObject;
 import android.widget.Toast;
+import org.json.JSONObject;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public final class MainActivity extends Activity {
     private WebView web;
     private boolean loaded = false;
+    private final ExecutorService metadataExecutor = Executors.newSingleThreadExecutor();
     private final BroadcastReceiver updates = new BroadcastReceiver() {
         @Override public void onReceive(Context context, Intent intent) {
             if(RadioService.EVENT.equals(intent.getAction())) sendState(intent.getStringExtra("stage"));
         }
     };
     public final class Bridge {
+        @JavascriptInterface public void refreshNowPlaying() {
+            if (metadataExecutor.isShutdown()) return;
+            metadataExecutor.execute(() -> {
+                JSONObject data = TrackMetadata.fetch();
+                runOnUiThread(() -> {
+                    if (web != null && loaded) {
+                        web.evaluateJavascript("window.RadioNowPlaying&&window.RadioNowPlaying.receive("+data.toString()+")", null);
+                    }
+                });
+            });
+        }
         @JavascriptInterface public void toggle() {
             runOnUiThread(() -> {
                 String current = RadioService.stage;
@@ -47,12 +61,14 @@ public final class MainActivity extends Activity {
         web.getSettings().setMediaPlaybackRequiresUserGesture(false);
         web.addJavascriptInterface(new Bridge(),"RadioAndroid");
         web.setWebViewClient(new WebViewClient() {
-            @Override public void onReceivedError(WebView v,WebResourceRequest request,WebResourceError error) {if(request.isForMainFrame())Toast.makeText(MainActivity.this,"De speler kon niet worden geladen.",Toast.LENGTH_LONG).show();}
+            @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                if(request.isForMainFrame()) Toast.makeText(MainActivity.this,"Scherm laden mislukt. Probeer de app opnieuw te openen.",Toast.LENGTH_LONG).show();
+            }
             @Override public void onPageFinished(WebView w,String url) {loaded=true;sendState(RadioService.stage);}
             @Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest request) {
                 android.net.Uri uri=request.getUrl();
                 if("file".equals(uri.getScheme()))return false;
-                try{startActivity(new Intent(Intent.ACTION_VIEW,uri));}catch(Exception e){Toast.makeText(MainActivity.this,"Kan website niet openen",Toast.LENGTH_SHORT).show();}
+                try {startActivity(new Intent(Intent.ACTION_VIEW,uri));} catch(Exception e) {Toast.makeText(MainActivity.this,"Kan link niet openen",Toast.LENGTH_SHORT).show();}
                 return true;
             }
         });
@@ -64,5 +80,5 @@ public final class MainActivity extends Activity {
     private void sendState(String stage) {
         if(loaded && web!=null) web.evaluateJavascript("window.RadioPlayer&&window.RadioPlayer.setNativeState("+JSONObject.quote(stage==null?"off":stage)+")",null);
     }
-    @Override protected void onDestroy() {unregisterReceiver(updates);if(web!=null){web.destroy();web=null;}super.onDestroy();}
+    @Override protected void onDestroy() {metadataExecutor.shutdownNow();unregisterReceiver(updates);if(web!=null){web.destroy();web=null;}super.onDestroy();}
 }

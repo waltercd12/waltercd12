@@ -10,7 +10,7 @@
     <div class="pumpkins" aria-label="Knipperende Halloween-discopompoenen"><span>🎃</span><span>🎃</span><span>🎃</span><span>🎃</span><span>🎃</span><span>🎃</span><span>🎃</span></div>
     <div class="onair"><span class="onair-dot"></span> ON AIR</div>
     <h1>Radio Schipluiden</h1><p class="subtitle">ALTIJD AAN</p>
-    <div class="trackbox"><div class="eyebrow">NU OP DE RADIO</div><div class="track" id="song">De beste hits van nu en toen</div><p class="status" id="status" aria-live="polite">Klaar om te luisteren</p></div>
+    <div class="trackbox"><div class="eyebrow">NU OP DE RADIO</div><div class="nowplaying-details"><div class="cover-frame"><img id="albumCover" src="icon-512.png" alt="Actuele cd-hoes" loading="eager"><span class="sr-only" id="albumLabel">Radio Schipluiden-logo</span></div><div class="song-info"><div class="artist" id="trackArtist">Radio Schipluiden</div><div class="track" id="song">De beste hits van nu en toen</div></div></div><p class="status" id="status" aria-live="polite">Klaar om te luisteren</p></div>
     <button class="play" type="button" id="play" aria-label="Start de radio" aria-pressed="false"><svg viewBox="0 0 24 24" id="playSvg" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>
     <div class="playlabel" id="playlabel">TIK OM TE LUISTEREN</div>
     <div class="pumpkin-floor" aria-hidden="true">✧ 🎃 ✦ 🎃 ✧ 🎃 ✦</div>
@@ -20,4 +20,4 @@
 </div>
 <audio id="intro" preload="auto" src="intro-jingle.mp3" playsinline></audio>
 <audio id="stream" preload="none" playsinline src="https://c40.radioboss.fm:8298/stream"></audio>
-<script src="player.js" defer></script></body></html>
+<script src="player.js" defer></script><script src="metadata.js" defer></script></body></html>
