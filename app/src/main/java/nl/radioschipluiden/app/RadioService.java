@@ -8,10 +8,13 @@ import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.Handler;
+import android.os.Looper;
 
 public final class RadioService extends Service {
     public static final String PLAY="nl.radioschipluiden.app.PLAY", STOP="nl.radioschipluiden.app.STOP", EVENT="nl.radioschipluiden.app.STATE";
-    private static final String STREAM="https://c40.radioboss.fm:8298/stream";
+    private static final String[] STREAMS={"https://c40.radioboss.fm:8298/stream","https://c40.radioboss.fm/stream/298"};
+    private final Handler handler=new Handler(Looper.getMainLooper());
     public static volatile String stage="off";
     private MediaPlayer player;
     private int token=0;
@@ -36,24 +39,32 @@ public final class RadioService extends Service {
             player=MediaPlayer.create(this,R.raw.intro_jingle);
             if(player==null)throw new IllegalStateException("Jingle niet gevonden");
             player.setOnCompletionListener(m->{if(started && token==version)startStream(version);});
-            player.setOnErrorListener((m,what,extra)->{error();return true;});
+            player.setOnErrorListener((m,what,extra)->{handler.post(()->startStream(version,0));return true;});
             player.start();
-        }catch(Exception ex){error();}
+        }catch(Exception ex){startStream(version,0);}
     }
-    private void startStream(int version){
+    private void startStream(int version,int index){
         if(!started||version!=token)return;
-        release();stage("connecting");
+        if(index>=STREAMS.length){error();return;}
+        release();stage(index==0?"connecting":"alternate");
         try{
             MediaPlayer next=new MediaPlayer();player=next;
             next.setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build());
             next.setWakeMode(this,android.os.PowerManager.PARTIAL_WAKE_LOCK);
-            next.setDataSource(this,Uri.parse(STREAM));
-            next.setOnPreparedListener(mp->{if(started && version==token){mp.start();stage("playing");}});
-            next.setOnErrorListener((mp,what,extra)->{error();return true;});
+            next.setDataSource(this,Uri.parse(STREAMS[index]));
+            next.setOnPreparedListener(mp->{if(started && version==token){try{mp.start();stage("playing");}catch(Exception e){startStream(version,index+1);}}});
+            next.setOnErrorListener((mp,what,extra)->{handler.post(()->startStream(version,index+1));return true;});
             next.setOnInfoListener((mp,what,extra)->{if(what==MediaPlayer.MEDIA_INFO_BUFFERING_START)stage("buffering");else if(what==MediaPlayer.MEDIA_INFO_BUFFERING_END)stage("playing");return false;});
             next.prepareAsync();
-        }catch(Exception ex){error();}
+            handler.postDelayed(()->{
+                if(started&&version==token&&player==next){
+                    try{if(!next.isPlaying())startStream(version,index+1);}
+                    catch(Exception ignored){startStream(version,index+1);}
+                }
+            },18000);
+        }catch(Exception ex){startStream(version,index+1);}
     }
+    private void startStream(int version){startStream(version,0);}
     private void error(){started=false;++token;release();stopForeground(STOP_FOREGROUND_REMOVE);stage("error");stopSelf();}
     private void shutdown(){started=false;++token;release();stage("off");stopForeground(STOP_FOREGROUND_REMOVE);}
     @Override public void onDestroy(){shutdown();super.onDestroy();}

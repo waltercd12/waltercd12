@@ -11,6 +11,7 @@ import android.webkit.*;
 import android.view.View;
 import android.view.WindowInsets;
 import org.json.JSONObject;
+import android.widget.Toast;
 
 public final class MainActivity extends Activity {
     private WebView web;
@@ -46,11 +47,13 @@ public final class MainActivity extends Activity {
         web.getSettings().setMediaPlaybackRequiresUserGesture(false);
         web.addJavascriptInterface(new Bridge(),"RadioAndroid");
         web.setWebViewClient(new WebViewClient() {
+            @Override public void onReceivedError(WebView v,WebResourceRequest request,WebResourceError error) {if(request.isForMainFrame())Toast.makeText(MainActivity.this,"De speler kon niet worden geladen.",Toast.LENGTH_LONG).show();}
             @Override public void onPageFinished(WebView w,String url) {loaded=true;sendState(RadioService.stage);}
             @Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest request) {
                 android.net.Uri uri=request.getUrl();
                 if("file".equals(uri.getScheme()))return false;
-                startActivity(new Intent(Intent.ACTION_VIEW,uri));return true;
+                try{startActivity(new Intent(Intent.ACTION_VIEW,uri));}catch(Exception e){Toast.makeText(MainActivity.this,"Kan website niet openen",Toast.LENGTH_SHORT).show();}
+                return true;
             }
         });
         setContentView(web);
