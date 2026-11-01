@@ -8,18 +8,27 @@
 <main><p class="info">Openbare P2000-meldingen, geen officiële waarschuwingen. Meldlocaties zijn indicatief. Bij nood bel je 112.</p>
 
 <section class="controls" id="wacard">
-<h2 style="margin:0 0 8px;color:#f1cf75;font-size:17px">📲 P2000 via gewone WhatsApp</h2>
-<p class="info" style="margin:0 0 10px">Geen WordPress nodig. Koppel één keer je eigen WhatsApp via CallMeBot of TextMeBot. WhatsApp-doorsturen wordt pas actief wanneer je het inschakelt. Je sleutel blijft op je telefoon.</p>
-<div class="line"><label for="provider" style="min-width:82px">Dienst</label><select id="provider"><option value="callmebot">CallMeBot (gratis indien beschikbaar)</option><option value="textmebot">TextMeBot (extern, betaald na proefperiode)</option></select></div>
-<div style="margin-top:9px"><label for="waPhone">Je WhatsApp-nummer, inclusief landcode</label><input type="tel" id="waPhone" placeholder="+31612345678" autocomplete="tel"></div>
-<div style="margin-top:9px"><label for="waKey">API-sleutel van je WhatsApp-dienst</label><input id="waKey" type="password" autocomplete="off" placeholder="Plak de ontvangen sleutel hier"></div>
-<p class="info" id="providerHelp"></p>
-<div class="line" style="margin-top:9px"><label for="waCity">Meldingen uit</label><select id="waCity"><option value="all">Heel Haaglanden</option><option value="den-haag">Den Haag</option><option value="delft">Delft</option><option value="zoetermeer">Zoetermeer</option><option value="westland">Westland</option><option value="midden-delfland">Midden-Delfland</option><option value="pijnacker-nootdorp">Pijnacker-Nootdorp</option><option value="rijswijk">Rijswijk</option><option value="leidschendam-voorburg">Leidschendam-Voorburg</option><option value="wassenaar">Wassenaar</option></select></div>
+<h2 style="margin:0 0 8px;color:#f1cf75;font-size:17px">📲 WhatsApp-koppeling</h2>
+<p class="info">Ontvang P2000-meldingen in je <b>gewone WhatsApp</b>, zonder WordPress. Voor automatisch versturen moet je één keer je persoonlijke account koppelen aan een externe dienst.</p>
+<div style="padding:10px;border-radius:10px;background:#1a3040;border:1px solid #416078;margin:10px 0">
+<strong>Stap 1 · Vraag je WhatsApp API-sleutel aan</strong>
+<p class="info">Kies hieronder <b>TextMeBot</b> (aanbevolen) en open de website. Vraag de 2-daagse proefversie aan. Je ontvangt een e-mail met je API-sleutel en een link om via QR-code WhatsApp te koppelen.</p>
+<div class="line"><select id="provider"><option value="textmebot">TextMeBot · gewone WhatsApp</option><option value="callmebot">CallMeBot · alleen als je al een sleutel hebt</option></select><button id="waOpen" class="active">Open koppeling ↗</button></div>
+<p class="info" id="providerHelp" style="margin-bottom:0"></p>
+</div>
+<div style="padding:10px;border-radius:10px;background:#1a3040;border:1px solid #416078;margin:10px 0">
+<strong>Stap 2 · Vul je gegevens in en verstuur een test</strong>
+<label for="waPhone" style="display:block;margin-top:9px">WhatsApp-nummer, bijvoorbeeld +31612345678</label>
+<input type="tel" id="waPhone" placeholder="+31612345678" autocomplete="tel">
+<label for="waKey" style="display:block;margin-top:9px">API-sleutel uit de e-mail (niet delen)</label>
+<input id="waKey" type="password" autocomplete="off" placeholder="Plak hier je API-sleutel">
+<div class="line" style="margin-top:9px"><label for="waCity">Regio</label><select id="waCity"><option value="all">Heel Haaglanden</option><option value="den-haag">Den Haag</option><option value="delft">Delft</option><option value="zoetermeer">Zoetermeer</option><option value="westland">Westland</option><option value="midden-delfland">Midden-Delfland</option><option value="pijnacker-nootdorp">Pijnacker-Nootdorp</option><option value="rijswijk">Rijswijk</option><option value="leidschendam-voorburg">Leidschendam-Voorburg</option><option value="wassenaar">Wassenaar</option></select></div>
 <div class="line" style="margin-top:10px;gap:16px"><label><input type="checkbox" class="waCheck" id="waFire" checked> Brandweer</label><label><input type="checkbox" class="waCheck" id="waAmb"> Ambulance</label><label><input type="checkbox" class="waCheck" id="waPolice"> Politie</label></div>
-<label class="line" style="margin-top:11px"><input type="checkbox" class="waCheck" id="waEnabled"><b>Automatisch via WhatsApp doorsturen</b></label>
-<p class="info">Android controleert in de achtergrond ongeveer elke 15 minuten; de uitvoering kan door batterijbesparing vertraagd worden. Maximaal drie nieuwe meldingen per controle. De eerste controle verstuurt geen oude meldingen. Dit is geen noodalarmeringssysteem.</p>
-<div class="line"><button id="waSave" class="active">💾 Opslaan</button><button id="waTest">📨 Test WhatsApp</button><button id="waNow">⟳ Controleer nu</button></div>
-<p id="waStatus" class="info" style="margin-top:12px">WhatsApp-instellingen laden…</p>
+<button style="width:100%;margin-top:12px;padding:12px" class="active" id="waConnect">✓ Koppelen en test versturen</button>
+</div>
+<div id="waStatus" role="status" class="info" style="padding:12px;background:#111c2b;border:1px solid #35475c;border-radius:10px">Koppeling nog niet gecontroleerd.</div>
+<div class="line" style="margin-top:10px"><button id="waNow">⟳ Meldingen controleren</button><button id="waStop">■ WhatsApp uitzetten</button></div>
+<p class="info">Na een succesvolle test controleert Android op de achtergrond ongeveer elke 15 minuten; batterijbesparing kan dit vertragen. De eerste controle slaat oudere meldingen over. Dit is geen officiële alarmering. TextMeBot heeft na de proefperiode een abonnement en een risico op WhatsApp-accountblokkering.</p>
 </section>
 <div class="controls"><div class="line"><select id="municipality"><option value="all">Heel Haaglanden (9 gemeenten)</option><option value="den-haag">Den Haag</option><option value="delft">Delft</option><option value="zoetermeer">Zoetermeer</option><option value="westland">Westland</option><option value="midden-delfland">Midden-Delfland</option><option value="pijnacker-nootdorp">Pijnacker-Nootdorp</option><option value="rijswijk">Rijswijk</option><option value="leidschendam-voorburg">Leidschendam-Voorburg</option><option value="wassenaar">Wassenaar</option></select><button id="refresh">⟳ Ververs</button></div>
 <div class="chips"><button data-type="all" class="active">Alle</button><button data-type="brandweer">🚒 Brandweer</button><button data-type="ambulance">🚑 Ambulance</button><button data-type="politie">🚓 Politie</button></div><input id="search" placeholder="Zoek straat, plaats of melding" type="search"></div>
@@ -88,25 +97,51 @@ try{let c=localStorage.getItem("p2000-cache");if(c){items=JSON.parse(c);render()
 setTimeout(fetchNow,200);document.addEventListener("visibilitychange",()=>{if(!document.hidden&&Date.now()-lastLoaded>60000)fetchNow()});setInterval(()=>{if(!document.hidden&&Date.now()-lastLoaded>60000)fetchNow()},20000);
 
 function providerHelp(){
- const c=el("provider").value==="callmebot";
- el("providerHelp").innerHTML=c?'CallMeBot: activeer je persoonlijke API-sleutel bij de WhatsApp-bot en plak hem hier. Aanmeldingen kunnen tijdelijk vol zijn. <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/">Uitleg en activering</a>.':'TextMeBot: maak een sleutel aan, koppel je WhatsApp-account met QR-code en plak de sleutel hier. Er kunnen kosten en accountblokkaderisico zijn. <a href="https://textmebot.com/">TextMeBot openen</a>.';
+ const textmebot=el("provider").value==="textmebot";
+ el("providerHelp").textContent=textmebot
+ ?"Ontvang de sleutel per e-mail, voeg je nummer toe en scan daarna de QR-code. De app maakt geen account voor je aan."
+ :"Gebruik CallMeBot alleen als je al een werkende API-sleutel hebt. Nieuwe aanmeldingen kunnen tijdelijk gesloten zijn.";
+ el("waOpen").textContent=textmebot?"Vraag API-sleutel aan ↗":"CallMeBot-uitleg ↗";
 }
-el("provider").onchange=providerHelp;providerHelp();
+el("provider").onchange=providerHelp; providerHelp();
+el("waOpen").onclick=()=>P2000.external(el("provider").value==="textmebot"?"https://textmebot.com/":"https://www.callmebot.com/blog/free-api-whatsapp-messages/");
+function selectedWaServices(){
+ return [["waFire","brandweer"],["waAmb","ambulance"],["waPolice","politie"]].filter(x=>el(x[0]).checked).map(x=>x[1]).join(",");
+}
 window.waConfigured=o=>{
- el("waPhone").value=o.phone||"";el("provider").value=o.provider||"callmebot";el("waCity").value=o.city||"all";el("waEnabled").checked=!!o.enabled;
- for(let [id,val] of [["waFire","brandweer"],["waAmb","ambulance"],["waPolice","politie"]])el(id).checked=(o.services||"brandweer").split(",").includes(val);
- el("waKey").value="";el("waKey").placeholder=o.hasKey?"Sleutel is opgeslagen (leeg laten om te behouden)":"Plak hier je API-sleutel";
- el("waStatus").textContent=(o.enabled?"Ingeschakeld. ":"Uitgeschakeld. ")+(o.status||"")+(o.last?" Laatste controle: "+new Date(o.last).toLocaleString("nl-NL"):"");
+ el("waPhone").value=o.phone||"";
+ el("provider").value=o.provider||"textmebot";
+ el("waCity").value=o.city||"all";
+ for(let [id,val] of [["waFire","brandweer"],["waAmb","ambulance"],["waPolice","politie"]])
+  el(id).checked=(o.services||"brandweer").split(",").includes(val);
+ el("waKey").value="";
+ el("waKey").placeholder=o.hasKey?"Sleutel al opgeslagen (leeg laten)":"Plak hier je API-sleutel";
+ el("waStatus").textContent=(o.enabled?"🟢 WhatsApp staat aan. ":"⚪ WhatsApp staat uit. ")+(o.status||"");
+ el("waConnect").disabled=false;
  providerHelp();
 };
-window.waSaved=o=>{el("waStatus").textContent=o.message; if(o.ok)setTimeout(()=>P2000.getWaConfig(),600)};
-window.waTest=o=>{el("waStatus").textContent=o.message};
-el("waSave").onclick=()=>{
- const services=[["waFire","brandweer"],["waAmb","ambulance"],["waPolice","politie"]].filter(x=>el(x[0]).checked).map(x=>x[1]).join(",");
- P2000.saveWaConfig(el("waPhone").value,el("waKey").value,el("provider").value,el("waCity").value,services,el("waEnabled").checked);
+window.waConnect=o=>{
+ el("waConnect").disabled=false;
+ el("waStatus").textContent=(o.ok?"✅ ":"⚠️ ")+o.message;
+ if(o.ok)P2000.getWaConfig();
 };
-el("waTest").onclick=()=>{el("waStatus").textContent="Testbericht aanbieden…";P2000.testWa()};
-el("waNow").onclick=()=>{el("waStatus").textContent="Achtergrondcontrole aanvragen…";P2000.checkWaNow()};
-document.querySelectorAll('#wacard a').forEach(a=>a.onclick=e=>{e.preventDefault();P2000.external(a.href)});
+window.waSaved=o=>{
+ el("waStatus").textContent=o.message;
+ setTimeout(()=>P2000.getWaConfig(),500);
+};
+window.waTest=o=>el("waStatus").textContent=o.message;
+el("waConnect").onclick=()=>{
+ if(!selectedWaServices()){el("waStatus").textContent="⚠️ Selecteer minstens één hulpdienst.";return;}
+ el("waConnect").disabled=true;
+ el("waStatus").textContent="Verbinding testen. De app verstuurt één testbericht via de gekozen dienst…";
+ P2000.connectWhatsApp(el("waPhone").value,el("waKey").value,el("provider").value,el("waCity").value,selectedWaServices());
+};
+el("waStop").onclick=()=>{
+ P2000.saveWaConfig(el("waPhone").value,el("waKey").value,el("provider").value,el("waCity").value,selectedWaServices(),false);
+};
+el("waNow").onclick=()=>{
+ el("waStatus").textContent="Achtergrondcontrole aangevraagd…";
+ P2000.checkWaNow();
+};
 setTimeout(()=>P2000.getWaConfig(),300);
 </script></body></html>

@@ -193,10 +193,11 @@ public class MainActivity extends Activity {
             try{
                 o.put("phone",p.getString("phone",""));
                 o.put("hasKey",!p.getString("key","").isEmpty());
-                o.put("provider",p.getString("provider","callmebot"));
+                o.put("provider",p.getString("provider","textmebot"));
                 o.put("city",p.getString("city","all"));
                 o.put("services",p.getString("services","brandweer"));
                 o.put("enabled",p.getBoolean("enabled",false));
+                o.put("verified",p.getBoolean("verified",false));
                 o.put("status",p.getString("status","Nog geen meldingencontrole uitgevoerd."));
                 o.put("last",p.getLong("lastCheck",0));
             }catch(Exception ignored){}
@@ -229,6 +230,49 @@ public class MainActivity extends Activity {
             if(enabled) WhatsAppWorker.schedule(MainActivity.this);
             else WhatsAppWorker.cancel(MainActivity.this);
             invoke("window.waSaved({ok:true,message:'Instellingen opgeslagen. '+(enabled?'Controle elke circa 15 minuten.':'Doorsturen uitgeschakeld.')});");
+        }
+        @JavascriptInterface public void connectWhatsApp(String phone,String key,String provider,String city,String services){
+            final String normalized=phone.replace(" ","").replace("-","").replace("(","").replace(")","");
+            if(!normalized.matches("\\+?[0-9]{10,15}")){
+                invoke("window.waConnect({ok:false,message:'Gebruik je nummer met landcode, bijvoorbeeld +31612345678.'});");return;
+            }
+            if(!provider.equals("callmebot")&&!provider.equals("textmebot")){
+                invoke("window.waConnect({ok:false,message:'Kies een WhatsApp-dienst.'});");return;
+            }
+            if(!city.equals("all")&&!java.util.Arrays.asList(slugs).contains(city)){
+                invoke("window.waConnect({ok:false,message:'Kies een geldige gemeente.'});");return;
+            }
+            if(!services.contains("brandweer")&&!services.contains("ambulance")&&!services.contains("politie")){
+                invoke("window.waConnect({ok:false,message:'Selecteer minstens één hulpdienst.'});");return;
+            }
+            final SharedPreferences prefs=getSharedPreferences("whatsapp",MODE_PRIVATE);
+            final String secret=key.trim().isEmpty()?prefs.getString("key",""):key.trim();
+            if(secret.length()<3){
+                invoke("window.waConnect({ok:false,message:'Vraag eerst een eigen API-sleutel aan via stap 1.'});");return;
+            }
+            executor.execute(()->{
+                String error=WhatsAppWorker.sendText(provider,normalized,secret,"FotoWalter P2000 Haaglanden: test van je WhatsApp-koppeling.");
+                try{
+                    JSONObject result=new JSONObject();
+                    if(error.isEmpty()){
+                        boolean old=prefs.getBoolean("enabled",false);
+                        boolean changed=!normalized.equals(prefs.getString("phone",""))||!secret.equals(prefs.getString("key",""))||
+                            !provider.equals(prefs.getString("provider",""))||!city.equals(prefs.getString("city",""));
+                        SharedPreferences.Editor edit=prefs.edit()
+                          .putString("phone",normalized).putString("key",secret).putString("provider",provider)
+                          .putString("city",city).putString("services",services)
+                          .putBoolean("verified",true).putBoolean("enabled",true)
+                          .putString("status","API heeft het testbericht geaccepteerd. Controleer of je het op WhatsApp hebt ontvangen.");
+                        if(changed||!old)edit.putBoolean("primed",false);
+                        edit.apply();
+                        WhatsAppWorker.schedule(MainActivity.this);
+                        result.put("ok",true).put("message","De API heeft je testbericht geaccepteerd en het doorsturen staat aan. Controleer nu WhatsApp. De eerste achtergrondcontrole slaat oude meldingen over.");
+                    }else{
+                        result.put("ok",false).put("message",error);
+                    }
+                    invoke("window.waConnect("+result.toString()+");");
+                }catch(Exception ignored){}
+            });
         }
         @JavascriptInterface public void testWa(){
             SharedPreferences p=getSharedPreferences("whatsapp",MODE_PRIVATE);

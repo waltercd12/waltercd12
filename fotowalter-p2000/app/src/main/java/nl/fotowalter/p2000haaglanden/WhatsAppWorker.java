@@ -70,13 +70,45 @@ public class WhatsAppWorker extends Worker {
     }
     static String sendText(String provider,String phone,String key,String message){
         try{
-            String base=provider.equals("textmebot")?"https://api.textmebot.com/send.php?recipient=":"https://api.callmebot.com/whatsapp.php?phone=";
-            String url=base+URLEncoder.encode(phone,"UTF-8")+"&apikey="+URLEncoder.encode(key,"UTF-8")+"&text="+URLEncoder.encode(message,"UTF-8");
-            String response=fetch(url).toLowerCase(java.util.Locale.ROOT);
-            if(response.contains("invalid")||response.contains("error")||response.contains("not allowed")||response.contains("not registered")||response.contains("blocked")||response.contains("subscribe")||response.contains("expired")||response.contains("trial period is over"))
-                return "API-weigering. Controleer je sleutel en WhatsApp-koppeling.";
-            return "";
-        }catch(Exception e){return e.getMessage()==null?"Onbekende verbindingsfout":e.getMessage();}
+            String base=provider.equals("textmebot")
+                ?"https://api.textmebot.com/send.php?recipient="
+                :"https://api.callmebot.com/whatsapp.php?phone=";
+            String url=base+URLEncoder.encode(phone,"UTF-8")+
+                 "&apikey="+URLEncoder.encode(key,"UTF-8")+
+                 "&text="+URLEncoder.encode(message,"UTF-8")+
+                 (provider.equals("textmebot")?"&json=yes":"");
+            String response=fetch(url).trim();
+            if(provider.equals("textmebot")){
+                try{
+                    JSONObject answer=new JSONObject(response);
+                    String status=answer.optString("status","").toLowerCase(java.util.Locale.ROOT);
+                    String comment=answer.optString("comment","").trim();
+                    if(status.equals("success"))return "";
+                    String low=comment.toLowerCase(java.util.Locale.ROOT);
+                    if(low.contains("invalid apikey")||low.contains("api key")||low.contains("wrong apikey"))
+                        return "API-sleutel niet geldig. Controleer de sleutel in de e-mail van TextMeBot.";
+                    if(low.contains("disconnected"))
+                        return "Je WhatsApp is nog niet gekoppeld. Open de verbindingslink uit de TextMeBot-e-mail en scan de QR-code.";
+                    if(low.contains("trial")||low.contains("expired")||low.contains("subscribe"))
+                        return "De proefperiode is verlopen. Bekijk je abonnement bij TextMeBot.";
+                    if(low.contains("invalid destination")||low.contains("recipient"))
+                        return "Het WhatsApp-nummer is niet geldig of niet bereikbaar. Controleer je landcode.";
+                    return "TextMeBot weigert het verzoek: "+(comment.isEmpty()?"onbekende API-fout":comment.substring(0,Math.min(180,comment.length())));
+                }catch(org.json.JSONException e){
+                    return "Onverwacht antwoord van TextMeBot. Controleer de koppeling in de TextMeBot-portal.";
+                }
+            }else{
+                String lower=response.toLowerCase(java.util.Locale.ROOT);
+                if(lower.contains("invalid")||lower.contains("error")||lower.contains("blocked")||lower.contains("expired")||lower.contains("not registered"))
+                    return "CallMeBot weigert het verzoek. Controleer je activatie en sleutel.";
+                if(lower.contains("message queued")||lower.contains("message sent")||lower.contains("success"))return "";
+                return "Onbekend antwoord van CallMeBot. Controleer of je WhatsApp een bericht ontvangt.";
+            }
+        }catch(Exception e){
+            String msg=e.getMessage();
+            if(msg!=null&&msg.startsWith("HTTP "))return "WhatsApp-dienst reageert met "+msg+". Probeer later opnieuw of controleer de sleutel.";
+            return "Geen verbinding met WhatsApp-dienst. Controleer internet en probeer opnieuw.";
+        }
     }
     private static class Entry{
         String id,title,link,city,date,service;
