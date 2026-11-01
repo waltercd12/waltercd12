@@ -1,0 +1,32 @@
+name: Diagnose P2000 feed connections
+on:
+  push:
+    branches: [build-fotowalter-p2000]
+    paths: ['.github/workflows/p2000-feed-diagnose.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect municipality RSS
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import urllib.request,urllib.error,xml.etree.ElementTree as ET
+          urls=['https://sirenes.app/rss/den-haag','https://sirenes.app/rss/delft','https://sirenes.app/rss/westland','https://sirenes.app/rss.xml','https://sirenes.app/112/den-haag']
+          for url in urls:
+              try:
+                  req=urllib.request.Request(url,headers={'User-Agent':'FotoWalter-P2000-Android/5.0','Accept':'application/rss+xml, application/xml, application/json, */*'})
+                  with urllib.request.urlopen(req,timeout=12) as resp:
+                      data=resp.read(2000000)
+                      ctype=resp.headers.get('Content-Type')
+                      print('URL',url,'HTTP',resp.status,'ctype',ctype,'bytes',len(data))
+                      print('body',data[:400].decode('utf8','replace').replace('\n',' '))
+                  try:
+                      root=ET.fromstring(data)
+                      print('items',len(root.findall('.//item')),'root',root.tag)
+                  except Exception as e: print('XML ERROR',str(e))
+              except Exception as e: print('ERROR',url,str(e))
+          PY
