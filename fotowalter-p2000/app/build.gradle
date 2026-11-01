@@ -1,0 +1,12 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'nl.fotowalter.p2000haaglanden'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'nl.fotowalter.p2000haaglanden.app2026'
+        minSdk 26
+        targetSdk 35
+        versionCode 300
+        versionName '3.0'
+    }
+}

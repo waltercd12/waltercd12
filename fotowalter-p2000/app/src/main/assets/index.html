@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>FotoWalter P2000 Haaglanden</title><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{color-scheme:dark;font:14px system-ui,Arial,sans-serif;color:#f2f4fa;background:#090d16}*{box-sizing:border-box}body{margin:0;padding-bottom:24px}header{display:flex;align-items:center;gap:12px;padding:13px;background:linear-gradient(115deg,#2f2814,#111827 80%);border-bottom:1px solid #95732b}header img{width:62px;height:62px;border-radius:12px;object-fit:cover;border:1px solid #ab862b}header h1{font-size:17px;color:#f1cf75;line-height:1.2;margin:0}header small{font-size:11px;color:#a9bdd1}main{padding:13px;max-width:900px;margin:auto}article,.controls{border:1px solid #304058;background:#141d2b;border-radius:13px;padding:12px;margin:9px 0}article h3{margin:8px 0;line-height:1.35;font-size:14px}article p{font-size:12px;color:#aabbd2;line-height:1.4}article time{font-size:11px;color:#d6af5c}button,select,input{border:1px solid #3d4b64;background:#1f3045;color:#fff;border-radius:9px;padding:10px;font:inherit}button{font-size:12px;font-weight:bold}button.active{background:#54401e;border-color:#c29e51;color:#ffe099}button:disabled{opacity:.5}select{flex:1;min-width:0}input{width:100%;margin-top:9px}a{color:#b6d5ff}.line{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.line>button{flex:none}.chips{display:flex;overflow-x:auto;gap:7px;margin-top:10px}.chips button{white-space:nowrap}.info{color:#a0afc2;font-size:12px;line-height:1.5}#counter{font-weight:bold;color:#e4c16f;padding:14px 2px 7px}#mapwrap{display:none}#map{height:64vh;min-height:400px;border:1px solid #43546e;border-radius:12px;background:#1c2b37}.leaflet-container{color:#181d28}#status{padding:10px;background:#192a3a;border-radius:10px;color:#c5d5ed;margin:10px 0}.tools{margin-top:12px;display:flex;gap:8px}.tools button{flex:1}#list{display:block}small{line-height:1.3}
+</style></head><body>
+<header><img src="../res/drawable-nodpi/icon.png" onerror="this.src='icon.png'" alt="FotoWalter"><div><h1>FotoWalter<br>P2000 Haaglanden</h1><small>BRANDWEER · AMBULANCE · POLITIE</small></div></header>
+<main><p class="info">Openbare P2000-meldingen, geen officiële waarschuwingen. Meldlocaties zijn indicatief. Bij nood bel je 112.</p>
+<div class="controls"><div class="line"><select id="municipality"><option value="all">Heel Haaglanden (9 gemeenten)</option><option value="den-haag">Den Haag</option><option value="delft">Delft</option><option value="zoetermeer">Zoetermeer</option><option value="westland">Westland</option><option value="midden-delfland">Midden-Delfland</option><option value="pijnacker-nootdorp">Pijnacker-Nootdorp</option><option value="rijswijk">Rijswijk</option><option value="leidschendam-voorburg">Leidschendam-Voorburg</option><option value="wassenaar">Wassenaar</option></select><button id="refresh">⟳ Ververs</button></div>
+<div class="chips"><button data-type="all" class="active">Alle</button><button data-type="brandweer">🚒 Brandweer</button><button data-type="ambulance">🚑 Ambulance</button><button data-type="politie">🚓 Politie</button></div><input id="search" placeholder="Zoek straat, plaats of melding" type="search"></div>
+<div id="status">Verbinden met P2000-feeds…</div><div class="tools"><button id="tablist" class="active">☰ Meldingen</button><button id="tabmap">⌖ Kaart</button></div><div id="counter"></div><section id="list"></section>
+<div id="mapwrap"><div id="map"></div><p id="mapinfo" class="info">Alleen meldingen met bruikbare locatie worden getoond.</p></div><p class="info">Bron: Sirenes RSS · Locatie: PDOK · Kaart: OpenStreetMap · FotoWalter</p>
+</main><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>
+"use strict";
+const names={"den-haag":"Den Haag","delft":"Delft","zoetermeer":"Zoetermeer","westland":"Westland","midden-delfland":"Midden-Delfland","pijnacker-nootdorp":"Pijnacker-Nootdorp","rijswijk":"Rijswijk","leidschendam-voorburg":"Leidschendam-Voorburg","wassenaar":"Wassenaar"};
+const el=x=>document.getElementById(x),esc=x=>String(x||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let items=[],type="all",map=null,group=null,view="list",requested=new Set(),loading=false,lastLoaded=0;
+const pin=i=>Number.isFinite(+i.lat)&&Number.isFinite(+i.lon)&&+i.lat>51.7&&+i.lat<52.4&&+i.lon>3.6&&+i.lon<4.9;
+function category(s){s=s.toLowerCase();if(/brandweer|\bbrw\b|\bbrand\b|\bp\s*[1-5]\b/.test(s))return"brandweer";if(/ambulance|\bambu\b|\bmka\b|\ba[012]\b|\bb[12]\b/.test(s))return"ambulance";if(/politie/.test(s))return"politie";return"overig"}
+function street(s){let m=String(s).match(/([\p{L}'’\- .]{3,60}(?:straat|laan|weg|plein|kade|gracht|dreef|singel|dijk|pad|hof|steeg|vaart|boulevard))\b/iu);return m?m[1].replace(/^(p\s*[1-5]|a[012]|b[12]|brand|ongeval|met spoed)\s+/i,"").trim():""}
+function date(s){let d=new Date(s);return isNaN(d)?'Tijd onbekend':d.toLocaleString("nl-NL",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}
+function shown(){let q=el("search").value.toLowerCase().trim();return items.filter(i=>(type==="all"||i.kind===type)&&(!q||((i.title+" "+i.slug+" "+i.road+" "+i.description).toLowerCase().includes(q))))}
+function render(){
+ let results=shown();el("counter").textContent=results.length+" meldingen";
+ el("list").innerHTML=results.length?results.slice(0,200).map(i=>{
+  let loc=i.road?i.road+", "+(names[i.slug]||i.slug):(names[i.slug]||i.slug);
+  let mapbtn=pin(i)?'<button data-pin="'+esc(i.id)+'">⌖ Toon op kaart</button>':'';
+  return '<article><div class="line"><b>'+esc(i.kind.toUpperCase())+'</b><time>'+esc(date(i.date))+'</time></div><h3>'+esc(i.title)+'</h3><p>📍 '+esc(loc)+'</p><div class="line"><button data-open="'+esc(i.link)+'">Originele melding</button>'+mapbtn+'</div></article>'
+ }).join(""):'<article>Geen meldingen beschikbaar. Probeer opnieuw te verversen.</article>';
+ document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>P2000.external(b.dataset.open));
+ document.querySelectorAll("[data-pin]").forEach(b=>b.onclick=()=>{showMap();let i=items.find(x=>x.id===b.dataset.pin);if(i&&pin(i)&&map)map.setView([+i.lat,+i.lon],15)});
+ renderMarkers();
+}
+function fetchNow(){if(loading)return;loading=true;el("refresh").disabled=true;el("status").textContent="Meldingen ophalen…";P2000.request(el("municipality").value)}
+window.receiveFeeds=p=>{
+ loading=false;el("refresh").disabled=false;
+ if(p.items.length){
+  items=p.items.map((x,n)=>({...x,id:x.guid||x.slug+"-"+n,kind:category(x.title+" "+x.description),road:street(x.title+" "+x.description)}))
+   .sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,450);
+  localStorage.setItem("p2000-cache",JSON.stringify(items));lastLoaded=Date.now();
+ }
+ el("status").textContent=p.sources?("Bijgewerkt · "+p.sources+"/"+p.totalSources+" gemeentefeeds · "+new Date().toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"})):("Geen verbinding met meldingenbron. "+(items.length?"Oude meldingen zichtbaar.":"Controleer internet."));
+ render();geocode();
+};
+function geocode(){
+ let missing=items.filter(i=>i.road&&!pin(i)&&!requested.has(i.id)).slice(0,22);
+ missing.forEach(i=>{requested.add(i.id);P2000.geocode(i.id,i.road,names[i.slug]||i.slug)});
+}
+window.locationReady=p=>{let i=items.find(x=>x.id===p.id);if(!i)return;i.lat=p.lat;i.lon=p.lon;if(view==="map")renderMarkers()};
+function initMap(){
+ if(map||!window.L)return;
+ map=L.map("map").setView([52.06,4.37],10);
+ L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"© OpenStreetMap"}).addTo(map);
+ group=L.layerGroup().addTo(map);
+}
+function renderMarkers(){
+ if(!map||!group)return;group.clearLayers();let count=0;
+ for(let i of shown()){if(!pin(i)||count>=180)continue;let c=i.kind==="brandweer"?"#ed6b65":i.kind==="ambulance"?"#dcae4b":"#69a7ed";
+ L.circleMarker([+i.lat,+i.lon],{radius:7,color:"#132137",weight:2,fillColor:c,fillOpacity:.9}).bindPopup('<b>'+esc(i.title)+'</b><br>'+esc(names[i.slug]||i.slug)).addTo(group);count++}
+ el("mapinfo").textContent=count+" kaartpinnen. Niet iedere P2000-melding bevat een exact adres.";
+}
+function showMap(){
+ view="map";el("list").style.display="none";el("mapwrap").style.display="block";
+ el("tabmap").classList.add("active");el("tablist").classList.remove("active");
+ initMap();if(!map){el("mapinfo").textContent="Kaart kon niet laden; internetverbinding nodig.";return;}
+ setTimeout(()=>{map.invalidateSize();renderMarkers()},120);
+}
+function showList(){view="list";el("mapwrap").style.display="none";el("list").style.display="block";el("tablist").classList.add("active");el("tabmap").classList.remove("active")}
+el("refresh").onclick=fetchNow;el("municipality").onchange=()=>{requested.clear();fetchNow()};
+el("search").oninput=render;el("tabmap").onclick=showMap;el("tablist").onclick=showList;
+document.querySelectorAll("[data-type]").forEach(b=>b.onclick=()=>{type=b.dataset.type;document.querySelectorAll("[data-type]").forEach(x=>x.classList.toggle("active",x===b));render()});
+try{let c=localStorage.getItem("p2000-cache");if(c){items=JSON.parse(c);render();el("status").textContent="Eerder geladen meldingen; wordt vernieuwd…"}}catch(e){}
+setTimeout(fetchNow,200);document.addEventListener("visibilitychange",()=>{if(!document.hidden&&Date.now()-lastLoaded>60000)fetchNow()});setInterval(()=>{if(!document.hidden&&Date.now()-lastLoaded>60000)fetchNow()},20000);
+</script></body></html>
