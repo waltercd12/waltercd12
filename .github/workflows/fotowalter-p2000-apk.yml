@@ -1,7 +1,7 @@
 name: Build FotoWalter P2000 Haaglanden APK
 on:
   push:
-    branches: [build-fotowalter-p2000]
+    branches: [fotowalter-android-whatsapp-v4]
     paths:
       - '.github/workflows/fotowalter-p2000-apk.yml'
       - 'fotowalter-p2000/**'
@@ -35,15 +35,15 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | head -12
           mkdir -p release
-          cp "$APK" release/FotoWalter-P2000-Haaglanden.apk
+          cp "$APK" release/FotoWalter-P2000-Haaglanden-WhatsApp-V4.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: FotoWalter-P2000-Haaglanden
-          path: release/FotoWalter-P2000-Haaglanden.apk
+          name: FotoWalter-P2000-Haaglanden-WhatsApp-V4
+          path: release/FotoWalter-P2000-Haaglanden-WhatsApp-V4.apk
       - name: Publish APK to build branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add release/FotoWalter-P2000-Haaglanden.apk
-          git commit -m "Build FotoWalter P2000 Android APK" || true
-          git push origin HEAD:build-fotowalter-p2000
+          git add release/FotoWalter-P2000-Haaglanden-WhatsApp-V4.apk
+          git commit -m "Build FotoWalter P2000 WhatsApp Android APK" || true
+          git push origin HEAD:fotowalter-android-whatsapp-v4
