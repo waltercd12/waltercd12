@@ -1,6 +1,15 @@
 package nl.fotowalter.p2000haaglanden;
 
 import android.app.Activity;
+import android.content.SharedPreferences;
+import androidx.work.WorkManager;
+import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.Constraints;
+import androidx.work.NetworkType;
+import java.util.concurrent.TimeUnit;
 import android.os.Bundle;
 import android.content.Intent;
 import android.net.Uri;
@@ -61,6 +70,11 @@ public class MainActivity extends Activity {
         });
         setContentView(web);
         web.loadUrl("file:///android_asset/index.html");
+        try {
+            SharedPreferences p=getSharedPreferences("whatsapp",MODE_PRIVATE);
+            if(p.getBoolean("enabled",false)) WhatsAppWorker.schedule(this);
+        }catch(Exception ignored){}
+
     }
 
     private static String node(Element e,String name){
@@ -172,6 +186,70 @@ public class MainActivity extends Activity {
                     }
                 }catch(Exception ignored){}
             });
+        }
+        @JavascriptInterface public void getWaConfig(){
+            SharedPreferences p=getSharedPreferences("whatsapp",MODE_PRIVATE);
+            JSONObject o=new JSONObject();
+            try{
+                o.put("phone",p.getString("phone",""));
+                o.put("hasKey",!p.getString("key","").isEmpty());
+                o.put("provider",p.getString("provider","callmebot"));
+                o.put("city",p.getString("city","all"));
+                o.put("services",p.getString("services","brandweer"));
+                o.put("enabled",p.getBoolean("enabled",false));
+                o.put("status",p.getString("status","Nog geen meldingencontrole uitgevoerd."));
+                o.put("last",p.getLong("lastCheck",0));
+            }catch(Exception ignored){}
+            invoke("window.waConfigured("+o.toString()+");");
+        }
+        @JavascriptInterface public void saveWaConfig(String phone,String key,String provider,String city,String services,boolean enabled){
+            SharedPreferences p=getSharedPreferences("whatsapp",MODE_PRIVATE);
+            String normalized=phone.replace(" ","").replace("-","").replace("(","").replace(")","");
+            if(!normalized.matches("\\+?[0-9]{10,15}")){
+                invoke("window.waSaved({ok:false,message:'Voer een geldig internationaal telefoonnummer in, bijvoorbeeld +31612345678.'});");return;
+            }
+            if(!provider.equals("callmebot") && !provider.equals("textmebot")){
+                invoke("window.waSaved({ok:false,message:'Kies een geldige WhatsApp-dienst.'});");return;
+            }
+            if(!city.equals("all")&&!java.util.Arrays.asList(slugs).contains(city)){
+                invoke("window.waSaved({ok:false,message:'Ongeldige gemeente.'});");return;
+            }
+            if(!services.contains("brandweer") && !services.contains("ambulance") && !services.contains("politie")){
+                invoke("window.waSaved({ok:false,message:'Selecteer minstens één hulpdienst.'});");return;
+            }
+            String savedKey=key.trim().isEmpty()?p.getString("key",""):key.trim();
+            if(enabled && savedKey.isEmpty()){
+                invoke("window.waSaved({ok:false,message:'Vul eerst je persoonlijke API-sleutel in.'});");return;
+            }
+            p.edit().putString("phone",normalized).putString("key",savedKey)
+                .putString("provider",provider).putString("city",city).putString("services",services)
+                .putBoolean("enabled",enabled).putBoolean("primed",false)
+                .putString("status",enabled?"Actief. Eerste controle slaat bestaande meldingen over.":"WhatsApp-doorsturen staat uit.")
+                .apply();
+            if(enabled) WhatsAppWorker.schedule(MainActivity.this);
+            else WhatsAppWorker.cancel(MainActivity.this);
+            invoke("window.waSaved({ok:true,message:'Instellingen opgeslagen. '+(enabled?'Controle elke circa 15 minuten.':'Doorsturen uitgeschakeld.')});");
+        }
+        @JavascriptInterface public void testWa(){
+            SharedPreferences p=getSharedPreferences("whatsapp",MODE_PRIVATE);
+            String phone=p.getString("phone",""),key=p.getString("key",""),provider=p.getString("provider","callmebot");
+            if(phone.isEmpty()||key.isEmpty()){invoke("window.waTest({ok:false,message:'Sla eerst je nummer en API-sleutel op.'});");return;}
+            long prev=p.getLong("lastTest",0);
+            if(System.currentTimeMillis()-prev<60000){invoke("window.waTest({ok:false,message:'Maximaal één test per minuut.'});");return;}
+            p.edit().putLong("lastTest",System.currentTimeMillis()).apply();
+            executor.execute(()->{
+                String error=WhatsAppWorker.sendText(provider,phone,key,"FotoWalter P2000 Haaglanden: testmelding. Je WhatsApp-koppeling is bereikbaar.");
+                try{
+                    JSONObject result=new JSONObject().put("ok",error.isEmpty()).put("message",error.isEmpty()?"Bericht aangeboden aan WhatsApp-dienst. Controleer je WhatsApp.":"Verzenden mislukt: "+error);
+                    invoke("window.waTest("+result.toString()+");");
+                }catch(Exception ignored){}
+            });
+        }
+        @JavascriptInterface public void checkWaNow(){
+            SharedPreferences p=getSharedPreferences("whatsapp",MODE_PRIVATE);
+            if(!p.getBoolean("enabled",false)){invoke("window.waTest({ok:false,message:'Zet WhatsApp-doorsturen eerst aan.'});");return;}
+            WhatsAppWorker.runOnce(MainActivity.this);
+            invoke("window.waTest({ok:true,message:'Controle aangevraagd. Open Status om de uitslag te bekijken.'});");
         }
         @JavascriptInterface public void external(String url) {
             if(!url.startsWith("https://"))return;
