@@ -3,11 +3,11 @@ android {
     namespace 'nl.fotowalter.p2000haaglanden'
     compileSdk 35
     defaultConfig {
-        applicationId 'nl.fotowalter.p2000haaglanden.whatsappv5'
+        applicationId 'nl.fotowalter.p2000haaglanden.whatsappv6'
         minSdk 26
         targetSdk 35
-        versionCode 501
-        versionName '5.0'
+        versionCode 600
+        versionName '6.0'
     }
 }
 

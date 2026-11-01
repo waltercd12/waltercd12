@@ -63,7 +63,7 @@ window.receiveFeeds=p=>{
    .sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,450);
   localStorage.setItem("p2000-cache",JSON.stringify(items));lastLoaded=Date.now();
  }
- el("status").textContent=p.sources?("Bijgewerkt · "+p.sources+"/"+p.totalSources+" gemeentefeeds · "+new Date().toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"})):("Geen verbinding met meldingenbron. "+(items.length?"Oude meldingen zichtbaar.":"Controleer internet."));
+ el("status").textContent=p.sources?("Bijgewerkt · "+p.sources+"/"+p.totalSources+" gemeentefeeds · "+new Date().toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"})):("Geen verbinding: "+(p.error||"onbekende verbindingsfout")+". "+(items.length?"Eerder geladen meldingen zichtbaar.":"Controleer je internet en probeer Opnieuw."));
  render();geocode();
 };
 function geocode(){

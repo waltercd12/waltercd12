@@ -46,6 +46,7 @@ public class MainActivity extends Activity {
     private WebView web;
     private final ExecutorService executor = Executors.newFixedThreadPool(6);
     private final AtomicBoolean fetching = new AtomicBoolean(false);
+    private final java.util.concurrent.ConcurrentHashMap<String,String> feedErrors=new java.util.concurrent.ConcurrentHashMap<>();
     private final String[] slugs={"den-haag","delft","zoetermeer","westland","midden-delfland","pijnacker-nootdorp","rijswijk","leidschendam-voorburg","wassenaar"};
 
     @Override public void onCreate(Bundle savedInstanceState) {
@@ -101,35 +102,53 @@ public class MainActivity extends Activity {
         JSONArray result=new JSONArray();
         try {
             String xml=http("https://sirenes.app/rss/"+slug);
-            DocumentBuilderFactory f=DocumentBuilderFactory.newInstance();
-            f.setNamespaceAware(false);
-            f.setFeature("http://apache.org/xml/features/disallow-doctype-decl",true);
-            f.setFeature("http://xml.org/sax/features/external-general-entities",false);
-            f.setFeature("http://xml.org/sax/features/external-parameter-entities",false);
-            Document d=f.newDocumentBuilder().parse(new InputSource(new java.io.StringReader(xml)));
-            NodeList items=d.getElementsByTagName("item");
-            for(int i=0;i<items.getLength() && i<50;i++){
-                Element e=(Element)items.item(i);
-                String title=node(e,"title");
-                if(title.isEmpty())continue;
-                JSONObject o=new JSONObject();
-                o.put("title",title);
-                o.put("description",node(e,"description"));
-                o.put("date",node(e,"pubDate"));
-                o.put("link",node(e,"link"));
-                o.put("guid",node(e,"guid"));
-                o.put("slug",slug);
-                String point=node(e,"georss:point");
-                if(!point.isEmpty()) {
-                    String[] nums=point.trim().split("\\s+");
-                    if(nums.length==2) {o.put("lat",Double.parseDouble(nums[0]));o.put("lon",Double.parseDouble(nums[1]));}
+            org.xmlpull.v1.XmlPullParser p=android.util.Xml.newPullParser();
+            p.setInput(new java.io.StringReader(xml));
+            JSONObject current=null;
+            int event=p.getEventType();
+            while(event!=org.xmlpull.v1.XmlPullParser.END_DOCUMENT && result.length()<50){
+                if(event==org.xmlpull.v1.XmlPullParser.START_TAG) {
+                    String tag=p.getName();
+                    if("item".equals(tag)){
+                        current=new JSONObject();
+                        current.put("slug",slug);
+                    }else if(current!=null){
+                        String field=null;
+                        if("title".equals(tag))field="title";
+                        else if("description".equals(tag))field="description";
+                        else if("pubDate".equals(tag))field="date";
+                        else if("link".equals(tag))field="link";
+                        else if("guid".equals(tag))field="guid";
+                        else if("point".equals(tag)||"georss:point".equals(tag))field="point";
+                        if(field!=null) current.put(field,p.nextText());
+                    }
+                }else if(event==org.xmlpull.v1.XmlPullParser.END_TAG && "item".equals(p.getName())){
+                    if(current!=null&&!current.optString("title").isEmpty()){
+                        String point=current.optString("point");
+                        if(!point.isEmpty()){
+                            String[] nums=point.trim().split("\\s+");
+                            try{
+                                if(nums.length==2){
+                                    current.put("lat",Double.parseDouble(nums[0]));
+                                    current.put("lon",Double.parseDouble(nums[1]));
+                                }
+                            }catch(NumberFormatException ignored){}
+                        }
+                        result.put(current);
+                    }
+                    current=null;
                 }
-                result.put(o);
+                event=p.next();
             }
-        }catch(Exception ignored){}
+            feedErrors.remove(slug);
+        }catch(Exception e){
+            String why=e.getClass().getSimpleName()+(e.getMessage()==null?"":": "+e.getMessage());
+            feedErrors.put(slug,why);
+            android.util.Log.e("FotoWalterP2000","RSS "+slug+": "+why,e);
+        }
         return result;
     }
-    private void invoke(String js) {
+        private void invoke(String js) {
         runOnUiThread(()->{ if(web!=null)web.evaluateJavascript(js,null); });
     }
     private class Bridge {
@@ -156,6 +175,7 @@ public class MainActivity extends Activity {
                     payload.put("items",out);
                     payload.put("sources",successes);
                     payload.put("totalSources",use.length);
+                    if(successes==0 && !feedErrors.isEmpty()) payload.put("error",feedErrors.values().iterator().next());
                 }catch(Exception ignored){}
                 invoke("window.receiveFeeds("+payload.toString()+");");
             });

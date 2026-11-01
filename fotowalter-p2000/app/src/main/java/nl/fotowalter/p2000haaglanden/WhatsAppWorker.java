@@ -120,29 +120,49 @@ public class WhatsAppWorker extends Worker {
     }
     private static List<Entry> feed(String city)throws Exception{
         String xml=fetch("https://sirenes.app/rss/"+city);
-        DocumentBuilderFactory factory=DocumentBuilderFactory.newInstance();
-        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl",true);
-        factory.setFeature("http://xml.org/sax/features/external-general-entities",false);
-        factory.setFeature("http://xml.org/sax/features/external-parameter-entities",false);
-        Document doc=factory.newDocumentBuilder().parse(new InputSource(new java.io.StringReader(xml)));
-        NodeList list=doc.getElementsByTagName("item");
+        org.xmlpull.v1.XmlPullParser p=android.util.Xml.newPullParser();
+        p.setInput(new java.io.StringReader(xml));
         List<Entry> out=new ArrayList<>();
-        for(int i=0;i<list.getLength()&&i<50;i++){
-            Element e=(Element)list.item(i); Entry a=new Entry();
-            a.title=n(e,"title");a.link=n(e,"link");a.city=city;a.date=n(e,"pubDate");
-            String guid=n(e,"guid");
-            a.id=!guid.isEmpty()?guid:(!a.link.isEmpty()?a.link:city+a.title+a.date);
-            String kind=(a.title+" "+n(e,"description")).toLowerCase(java.util.Locale.ROOT);
-            if(kind.contains("brandweer")||kind.startsWith("brw"))a.service="brandweer";
-            else if(kind.contains("ambulance")||kind.contains("ambu"))a.service="ambulance";
-            else if(kind.contains("politie"))a.service="politie";
-            else a.service="overig";
-            try{a.time=java.time.ZonedDateTime.parse(a.date,java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli();}catch(Exception ex){a.time=0L;}
-            if(!a.title.isEmpty())out.add(a);
+        Entry current=null;
+        String description="";
+        String guid="";
+        int event=p.getEventType();
+        while(event!=org.xmlpull.v1.XmlPullParser.END_DOCUMENT && out.size()<50){
+            if(event==org.xmlpull.v1.XmlPullParser.START_TAG){
+                String tag=p.getName();
+                if("item".equals(tag)){
+                    current=new Entry(); current.city=city;
+                    description="";guid="";
+                }else if(current!=null){
+                    switch(tag){
+                        case "title": current.title=p.nextText();break;
+                        case "description": description=p.nextText();break;
+                        case "link":current.link=p.nextText();break;
+                        case "pubDate":current.date=p.nextText();break;
+                        case "guid":guid=p.nextText();break;
+                    }
+                }
+            }else if(event==org.xmlpull.v1.XmlPullParser.END_TAG && "item".equals(p.getName())){
+                if(current!=null && current.title!=null && !current.title.isEmpty()){
+                    current.id=!guid.isEmpty()?guid:(
+                        current.link!=null&&!current.link.isEmpty()?current.link:city+current.title+current.date);
+                    String kind=(current.title+" "+description).toLowerCase(java.util.Locale.ROOT);
+                    if(kind.contains("brandweer")||kind.startsWith("brw"))current.service="brandweer";
+                    else if(kind.contains("ambulance")||kind.contains("ambu"))current.service="ambulance";
+                    else if(kind.contains("politie"))current.service="politie";
+                    else current.service="overig";
+                    if(current.date!=null)try{
+                        current.time=java.time.ZonedDateTime.parse(current.date,java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli();
+                    }catch(Exception ignored){current.time=0L;}
+                    out.add(current);
+                }
+                current=null;
+            }
+            event=p.next();
         }
         return out;
     }
-    private static LinkedHashSet<String> readSeen(String s){
+        private static LinkedHashSet<String> readSeen(String s){
         LinkedHashSet<String> seen=new LinkedHashSet<>();
         try{
             JSONArray a=new JSONArray(s);
